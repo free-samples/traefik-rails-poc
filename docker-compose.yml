@@ -1,0 +1,62 @@
+version: '3.2'
+
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command: --api.insecure=true --providers.docker
+    networks:
+      - traefik
+    ports:
+      - "80:80"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+      - "443:443"
+    volumes:
+      # TODO: Figure out a way to make the config file work correctly
+      # - "$PWD/traefik.toml:/etc/traefik/traefik.toml"
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    labels:
+      - "traefik.http.routers.reverse-proxy.rule=Host(`admin.traefik.localhost`)"
+  db:
+   image: postgres
+   volumes:
+     - ./db-data/db:/var/lib/postgresql/data
+   restart: always
+   environment:
+     POSTGRES_PASSWORD: 12345678
+     POSTGRES_USER: traefik_rails_poc
+     POSTGRES_DB: traefik_rails_poc
+   networks:
+     - traefik
+  app:
+    build: .
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/myapp
+    ports:
+      - "3000:3000"
+    networks:
+      - traefik
+    depends_on:
+      - db
+    labels:
+      - "traefik.http.routers.app.rule=Host(`app.traefik.localhost`)"
+  web:    
+    build:      
+      context: .      
+      dockerfile: ./docker/web/Dockerfile    
+    depends_on:      
+      - app    
+    ports:      
+      - 8000:80
+    networks:
+     - traefik
+    labels:
+      - "traefik.http.routers.web.rule=Host(`www.traefik.localhost`)"
+networks:
+  traefik:
+    external:
+      name: traefik

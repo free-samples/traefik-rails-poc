@@ -1,0 +1,15 @@
+defaultEntryPoints = ["http"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+#config of host traefik with http auth basic 
+[web]
+address = ":8080"
+
+#[docker]
+#endpoint = "unix:///var/run/docker.sock"
+##choose local domain you want
+#domain = "dev.local" 
+#watch = true
+#exposedbydefault = true
